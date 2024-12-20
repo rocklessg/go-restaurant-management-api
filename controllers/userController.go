@@ -167,7 +167,7 @@ func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		//By calling defer cancel() at the start, you ensure that the context will be canceled and resources
+		//By calling defer cancel() at the start, we ensure that the context will be canceled and resources
 		//will be released when the function exits,
 		//whether it exits normally or due to an error.
 		defer cancel()
