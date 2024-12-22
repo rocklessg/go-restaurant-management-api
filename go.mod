@@ -3,6 +3,7 @@ module go-restaurant-management
 go 1.23.3
 
 require (
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.10.0
 	go.mongodb.org/mongo-driver v1.17.1
 	golang.org/x/crypto v0.31.0
