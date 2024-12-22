@@ -2,7 +2,6 @@ package controller
 
 import(
 	"context"
-	"fmt"
 	"log"
 	"math"
 	"net/http"
