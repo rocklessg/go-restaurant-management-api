@@ -2,8 +2,8 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -36,7 +36,6 @@ func GetOrders() gin.HandlerFunc {
 		var allOrders []bson.M
 		if err := result.All(ctx, &allOrders); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error occurred while processing order items"})
-			log.Fatal(err)
 			return
 		}
 
@@ -57,7 +56,7 @@ func GetOrder() gin.HandlerFunc {
 		err := orderCollection.FindOne(ctx, bson.M{"order_id": orderId}).Decode(&order)
 		if err != nil {
 			// Check if the error is due to no documents found
-			if err == mongo.ErrNoDocuments {
+			if errors.Is(err, mongo.ErrNoDocuments) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 				return
 			}
@@ -156,8 +155,7 @@ func UpdateOrder() gin.HandlerFunc {
 
 		// Prepare the filter and update options
 		filter := bson.M{"order_id": orderId}
-		upsert := true
-		opts := options.Update().SetUpsert(upsert)
+		opts := options.Update().SetUpsert(true)
 
 		// Perform the update operation
 		result, err := orderCollection.UpdateOne(ctx, filter, bson.D{{Key: "$set", Value: updateObj}}, opts)
