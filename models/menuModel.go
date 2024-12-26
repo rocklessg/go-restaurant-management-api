@@ -5,7 +5,7 @@ import(
 )
 
 type Menu struct {
-	BaseEntity
+	BaseEntity					  `bson:",inline"`
 	Name       string             `json:"name" validate:"required"`
 	Category   string             `json:"category" validate:"required"`
 	Start_Date *time.Time         `json:"start_date"`

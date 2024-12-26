@@ -4,7 +4,7 @@ import(
 )
 
 type OrderItem struct {
-	BaseEntity
+	BaseEntity						 `bson:",inline"`
 	Quantity      *string            `json:"quantity" validate:"required,eq=S|eq=M|eq=L"`
 	Unit_price    *float64           `json:"unit_price" validate:"required"`
 	Food_id       *string            `json:"food_id" validate:"required"`

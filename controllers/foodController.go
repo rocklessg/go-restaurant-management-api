@@ -2,7 +2,6 @@ package controller
 
 import(
 	"context"
-	"log"
 	"math"
 	"net/http"
 	"strconv"
@@ -70,7 +69,6 @@ func GetFoods() gin.HandlerFunc {
 		// Create a value into which the single document can be decoded
 		var allFoods []bson.M
 		if err = result.All(ctx, &allFoods); err != nil {
-			log.Fatal(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while processing results"})
 			return // Exit the handler if there's an error
 		}
