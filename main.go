@@ -9,7 +9,7 @@ import (
 	routes "go-restaurant-management/routes"
 
 	"github.com/gin-gonic/gin"
-	
+
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -35,4 +35,8 @@ func main() {
 	routes.InvoiceRoutes(router)
 
 	router.Run(":" + port)
+	//err := router.Run(":" + port)
+	//if err != nil {
+	//	return
+	//}
 }

@@ -23,7 +23,7 @@ var userCollection *mongo.Collection = database.OpenCollection(database.Client, 
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		defer cancel() // Ensure context is canceled to free resources
+		defer cancel()
 
 		// Retrieve query parameters with defaults
 		recordPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
@@ -39,59 +39,114 @@ func GetUsers() gin.HandlerFunc {
 		startIndex := (page - 1) * recordPerPage
 
 		// Define aggregation stages
-		matchStage := bson.D{{"$match", bson.D{{}}}}
-		projectStage := bson.D{
-			{"$project", bson.D{
-				{"_id", 0},
-				{"total_count", 1},
-				{"user_items", bson.D{{"$slice", []interface{}{"$data", startIndex, recordPerPage}}}},
-			}},
-		}
+		matchStage := bson.D{{"$match", bson.D{}}} // Fetch all documents
+		skipStage := bson.D{{"$skip", int64(startIndex)}} // Skip to start index
+		limitStage := bson.D{{"$limit", int64(recordPerPage)}} // Limit to records per page
+		countStage := bson.D{{"$count", "total_count"}} // Count total documents
 
-		// Execute the aggregation
-		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{
-			matchStage, projectStage,
+		// Execute the aggregation to get user data
+		userDataResult, err := userCollection.Aggregate(ctx, mongo.Pipeline{
+			matchStage, skipStage, limitStage,
 		})
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while listing user items"})
-			return // Exit the handler if there's an error
+			return
 		}
 
 		// Retrieve results
 		var allUsers []bson.M
-		if err = result.All(ctx, &allUsers); err != nil {
-			log.Fatal(err)
-			return // Exit the handler if there's an error
+		if err = userDataResult.All(ctx, &allUsers); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to parse user data"})
+			return
 		}
 
-		// Check if any users were found
-		if len(allUsers) == 0 {
-			c.JSON(http.StatusNotFound, gin.H{"message": "no users found"})
-			return // Exit if no users are found
+		// Execute the aggregation to count total users
+		countResult, err := userCollection.Aggregate(ctx, mongo.Pipeline{
+			matchStage, countStage,
+		})
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while counting user items"})
+			return
 		}
 
-		// Respond with the first user
-		c.JSON(http.StatusOK, allUsers[0])
+		// Retrieve count result
+		var countData []bson.M
+		if err = countResult.All(ctx, &countData); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to parse user count"})
+			return
+		}
+
+		totalCount := 0
+		if len(countData) > 0 {
+			totalCount = int(countData[0]["total_count"].(int32)) // Assuming total_count is of type int32
+		}
+
+		// Respond with all users and total count
+		c.JSON(http.StatusOK, gin.H{
+			"page":          page,
+			"recordPerPage": recordPerPage,
+			"total_count":   totalCount,
+			"users":         allUsers,
+		})
 	}
 }
+
 
 func GetUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		userId := c.Param("user_id")
+		defer cancel()
+
+		userId := c.Query("user_id") // Fetch user ID from query parameter
+		if userId == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "user_id query parameter is required"})
+			return
+		}
 
 		var user models.User
 
-		err := userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&user)
-
-		defer cancel()
+		// Convert user_id to ObjectId if stored as ObjectId in MongoDB
+		objectId, err := primitive.ObjectIDFromHex(userId)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing user items"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID format"})
+			return
 		}
+
+		// Query the database
+		err = userCollection.FindOne(ctx, bson.M{"_id": objectId}).Decode(&user)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusNotFound, gin.H{"message": "user not found"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while fetching the user"})
+			return
+		}
+
+		// Respond with the user data
 		c.JSON(http.StatusOK, user)
 	}
 }
+
+
+// func GetUser() gin.HandlerFunc {
+// 	return func(c *gin.Context) {
+// 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+// 		userId := c.Param("user_id")
+
+// 		var user models.User
+
+// 		err := userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&user)
+
+// 		defer cancel()
+// 		if err != nil {
+// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing user items"})
+// 		}
+// 		c.JSON(http.StatusOK, user)
+// 	}
+// }
 
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -116,8 +171,8 @@ func SignUp() gin.HandlerFunc {
 		count, err := userCollection.CountDocuments(ctx, bson.M{"email": user.Email})
 
 		if err != nil {
-			log.Panic(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
+			//log.Panic(err)
 			return
 		}
 
@@ -129,7 +184,7 @@ func SignUp() gin.HandlerFunc {
 		count, err = userCollection.CountDocuments(ctx, bson.M{"phone": user.Phone})
 
 		if err != nil {
-			log.Panic(err)
+			//log.Panic(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the phone number"})
 			return
 		}

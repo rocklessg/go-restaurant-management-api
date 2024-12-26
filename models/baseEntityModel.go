@@ -7,6 +7,6 @@ import(
 
 type BaseEntity struct {
 	ID         primitive.ObjectID `bson:"_id,omitempty"` // Use omitempty to skip if not set
-    Created_at time.Time          `json:"created_at"`
-    Updated_at time.Time          `json:"updated_at"`
+    Created_at time.Time          `json:"created_at,omitempty"`
+    Updated_at time.Time          `json:"updated_at,omitempty"`
 }

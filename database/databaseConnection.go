@@ -11,7 +11,8 @@ import (
 )
 
 func DBinstance() *mongo.Client {
-	MongoDb := "mongodb://localhost:27017"
+	//MongoDb := "mongodb://localhost:27017"
+	MongoDb := "mongodb://development:testpassword@localhost:27017"
 	fmt.Print(MongoDb)
 
 	// Create a new client and connect to the MongoDB server
