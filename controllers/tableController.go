@@ -43,7 +43,7 @@ func GetTable() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 
-		tableId := c.Param("table_id")
+		tableId := c.Query("table_id")
 		var table models.Table
 
 		err := tableCollection.FindOne(ctx, bson.M{"table_id": tableId}).Decode(&table)

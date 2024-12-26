@@ -79,7 +79,7 @@ func GetInvoice() gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel() // Ensure context is canceled
 
-		invoiceId := c.Param("invoice_id")
+		invoiceId := c.Query("invoice_id")
 		var invoice models.Invoice
 
 		err := invoiceCollection.FindOne(ctx, bson.M{"invoice_id": invoiceId}).Decode(&invoice)

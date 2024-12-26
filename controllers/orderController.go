@@ -49,7 +49,7 @@ func GetOrder() gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel() // Ensure context is canceled
 
-		orderId := c.Param("order_id")
+		orderId := c.Query("order_id")
 		var order models.Order
 
 		// Attempt to find the order by order_id

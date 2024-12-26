@@ -45,7 +45,7 @@ func GetMenu() gin.HandlerFunc {
 
 		var menu models.Menu
 
-		err := foodCollection.FindOne(ctx, bson.M{"menu_id": c.Param("menu_id")}).Decode(&menu)
+		err := foodCollection.FindOne(ctx, bson.M{"menu_id": c.Query("menu_id")}).Decode(&menu)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while fetching the menu"})
 			return

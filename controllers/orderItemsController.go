@@ -135,7 +135,7 @@ func GetOrderItem() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 
-		orderItemId := c.Param("order_item_id")
+		orderItemId := c.Query("order_item_id")
 		var orderItem models.OrderItem
 
 		err := orderItemCollection.FindOne(ctx, bson.M{"orderItem_id": orderItemId}).Decode(&orderItem)

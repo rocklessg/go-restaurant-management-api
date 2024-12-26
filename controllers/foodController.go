@@ -90,7 +90,7 @@ func GetFood() gin.HandlerFunc {
 
 		var food models.Food
 
-		err := foodCollection.FindOne(ctx, bson.M{"food_id": c.Param("food_id")}).Decode(&food)
+		err := foodCollection.FindOne(ctx, bson.M{"food_id": c.Query("food_id")}).Decode(&food)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while fetching the food item"})
 			return
