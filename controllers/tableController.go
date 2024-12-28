@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"time"
+	"fmt"
 
 	"go-restaurant-management/database"
 	"go-restaurant-management/models"
@@ -23,7 +24,7 @@ func GetTables() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 
-		result, err := orderCollection.Find(ctx, bson.M{})
+		result, err := tableCollection.Find(ctx, bson.M{})
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing table items"})
 			return
@@ -46,16 +47,19 @@ func GetTable() gin.HandlerFunc {
 		tableId := c.Query("table_id")
 		var table models.Table
 
+		fmt.Printf("Searching for table with ID: %s", tableId)
 		err := tableCollection.FindOne(ctx, bson.M{"table_id": tableId}).Decode(&table)
 		if err != nil {
+			fmt.Printf("Error occurred: %v", err) // Log the error
 			// Check if the error is due to no documents found
 			if errors.Is(err, mongo.ErrNoDocuments) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "table not found"})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while fetching the tables"})
 			return
 		}
+		fmt.Printf("Fetched table: %+v", table) // Log the fetched table
 		c.JSON(http.StatusOK, table)
 	}
 }
