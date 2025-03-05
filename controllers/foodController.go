@@ -147,46 +147,56 @@ func CreateFood() gin.HandlerFunc {
 func UpdateFood() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
-		defer cancel() // Ensure context is canceled to free resources
+		defer cancel()
 
 		var menu models.Menu
 		var food models.Food
 
-		foodId := c.Param("food_id")
-
-		// Bind JSON to food struct
-		if err := c.BindJSON(&food); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		// Get the food_id from query parameters and validate
+		foodId := c.Query("food_id")
+		if foodId == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "food_id is required"})
 			return
 		}
 
+		// Bind the JSON request body to the food struct
+		if err := c.BindJSON(&food); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload", "details": err.Error()})
+			return
+		}
+
+		// Dynamically build the update object
 		var updateObj primitive.D
 
-		// Build update object based on non-nil fields
 		if food.Name != nil {
-			updateObj = append(updateObj, bson.E{"name", food.Name})
+			updateObj = append(updateObj, bson.E{"name", *food.Name})
 		}
 		if food.Price != nil {
-			updateObj = append(updateObj, bson.E{"price", food.Price})
+			updateObj = append(updateObj, bson.E{"price", *food.Price})
 		}
 		if food.Food_image != nil {
-			updateObj = append(updateObj, bson.E{"food_image", food.Food_image})
+			updateObj = append(updateObj, bson.E{"food_image", *food.Food_image})
 		}
 
-		// Check if the menu exists
+		// Check if the menu exists if menu_id is provided
 		if food.Menu_id != nil {
 			if err := menuCollection.FindOne(ctx, bson.M{"menu_id": food.Menu_id}).Decode(&menu); err != nil {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Menu was not found"})
+				c.JSON(http.StatusNotFound, gin.H{"error": "Menu not found"})
 				return
 			}
-			updateObj = append(updateObj, bson.E{"menu", food.Menu_id})
+			updateObj = append(updateObj, bson.E{"menu_id", *food.Menu_id})
 		}
 
-		// Set updated_at timestamp directly
-		food.Updated_at = time.Now()
-		updateObj = append(updateObj, bson.E{"updated_at", food.Updated_at})
+		// Ensure at least one field is being updated
+		if len(updateObj) == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "No fields to update"})
+			return
+		}
 
-		// Define filter and options for update
+		// Always update the updated_at field
+		updateObj = append(updateObj, bson.E{"updated_at", time.Now()})
+
+		// Define the filter and update options
 		filter := bson.M{"food_id": foodId}
 		upsert := true
 		opt := options.Update().SetUpsert(upsert)
@@ -194,10 +204,16 @@ func UpdateFood() gin.HandlerFunc {
 		// Perform the update operation
 		result, err := foodCollection.UpdateOne(ctx, filter, bson.D{{"$set", updateObj}}, opt)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Food item update failed"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Food item update failed", "details": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, result)
+
+		if result.MatchedCount == 0 && result.UpsertedCount == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Food not found"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Food updated successfully", "result": result})
 	}
 }
 

@@ -11,7 +11,6 @@ import (
 )
 
 func DBinstance() *mongo.Client {
-	//MongoDb := "mongodb://localhost:27017"
 	MongoDb := "mongodb://development:testpassword@localhost:27017"
 	fmt.Print(MongoDb)
 
